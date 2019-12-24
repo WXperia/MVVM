@@ -62,9 +62,10 @@ function Compile(el, mvvm) {
                         content = content[key]
                     })
                     contentList.push(content)
-                    //存储这次改变的值
-                    //根据key进行匹配对应的content
+                    
+                    //存储这次改变的值，并根据key进行匹配对应的content
                     text = text.replace('{{'+key+'}}', content)
+                    //将值赋给虚拟节点
                     node.textContent = text
                 })
             }
