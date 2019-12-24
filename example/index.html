@@ -10,14 +10,21 @@
 
 <body>
     <div id="app">
-
+        <p>
+            {{a.a.a}}
+            {{a.a.b}}
+            {{a.a.c.a}}
+        </p>
+        <div>
+            {{b}}
+        </div>
     </div>
 </body>
 <script src="../js/mvvm.js"></script>
 <script>
     var mvvm = new MVVM({
-        el: document.getElementById('app'),
-        data: {a:{a:{a:1}}}
+        el: '#app',
+        data: {a:{a:{a:3,b:13,c:{a:1}}},b:'12'}
     })
 </script>
 
