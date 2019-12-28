@@ -30,6 +30,7 @@ function Compile(el, mvvm) {
     function $replace(fragment) {
         Array.from(fragment.childNodes).forEach(function (node) {
             let text = node.textContent;
+            let temp = node.textContent
             let reg = /\{\{(.*)\}\}/g
             let re = /\{\{(.*)\}\}/
             //https://www.w3school.com.cn/jsref/prop_node_nodetype.asp
@@ -52,21 +53,31 @@ function Compile(el, mvvm) {
                 arr = text.match(reg).map(function (val) {
                     return val.match(re)[1]
                 })
-                console.log(arr)
                 let content ;
                 let contentList = []
                 arr.forEach(function (key) {
                     let replaceData = key.split('.');
+                    let flg = true;
                     content = mvvm
                     replaceData.forEach(function (key) {
+                        if(flg){
+                            content[key].__bindKeys__ = key
+                        }
                         content = content[key]
                     })
                     contentList.push(content)
-                    
-                    //存储这次改变的值，并根据key进行匹配对应的content
-                    text = text.replace('{{'+key+'}}', content)
+                    temp = temp.replace('{{'+key+'}}', content)
                     //将值赋给虚拟节点
-                    node.textContent = text
+                    node.textContent = temp
+                    new Watcher(mvvm,key,function(newVal){
+                        if(!reg.test(temp)){
+                            temp = text
+                        }
+                        temp = temp.replace('{{'+key+'}}', newVal)
+                        node.textContent = temp
+                        //将值赋给虚拟节点
+                    })
+                  
                 })
             }
             if (node.childNodes) {
@@ -81,15 +92,19 @@ function isPlainObject(val) {
     return typeof val !== 'undefined' && Object.prototype.toString.call(val) === '[object Object]'
 }
 function Observe(data) {
+    let dep = new Dep()
     Object.keys(data).forEach(key => {
         let val = data[key]
-        observe(val)
+        if (isPlainObject(val))  {
+            observe(val)
+        }
         Object.defineProperty(data, key, {
             enumerable: true,
             /* 
                获取值时调用的函数
            */
             get() {
+                Dep.target&&dep.addSub(Dep.target)
                 return val
             },
             /* 
@@ -101,13 +116,14 @@ function Observe(data) {
                 }
                 val = newVal
                 observe(newVal)
+                dep.notify()
             }
         })
     })
 }
 
 function observe(data) {
-    if (!isPlainObject(data)) return
+    
     return new Observe(data)
 }
  /* vue 特点能新增没有在data中注册的对
@@ -116,3 +132,43 @@ function observe(data) {
 /*
     深度响应时因为每次赋予一新对象时，会给这个新对象增加数据劫持
 */
+
+/* 
+    发布订阅
+*/
+function Dep() {
+    this.subs = []
+}
+Dep.prototype.addSub = function(sub){
+    this.subs.push(sub)
+}
+
+Dep.prototype.notify = function(){
+    this.subs.forEach(sub=>sub.update());
+}
+
+function Watcher(mvvm,exp,fn){
+    this.mvvm = mvvm;
+    this.exp = exp;
+    console.log(exp)
+    this.fn = fn;
+    Dep.target = this;
+    let val = mvvm;
+    let arr = exp.split('.');
+    arr.forEach(function(k){
+        val = val[k]
+    })
+    Dep.target = null;
+}
+
+Watcher.prototype.update = function(){
+    let val = this.mvvm;
+    let arr = this.exp.split('.');
+    console.log(this.exp)
+    arr.forEach(function(k){
+        val = val[k]
+    })
+    console.log(val)
+    this.fn(val);
+
+}
